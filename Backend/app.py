@@ -3,9 +3,10 @@ import pandas as pd
 from sklearn.linear_model import LogisticRegression
 import numpy as np
 import joblib
+from flask_cors import CORS
 
 app = Flask(__name__)
-
+CORS(app)
 
 try:
     model = joblib.load('model.pkl')
@@ -15,9 +16,18 @@ except:
 @app.route('/train', methods=['POST'])
 
 def train_model():
-    data = request.get_json()
-    X = pd.DataFrame(data['X'])
-    y = pd.DataFrame(data['y'])
+
+    if 'file' not in request.files:
+        return jsonify({
+            'message': 'No file uploaded',
+            'success': False
+        })
+
+    file = request.files['file']
+    df = pd.read_csv(file)
+    df.drop('customer_id', axis=1, inplace=True)
+    X = df.drop('visited_website', axis=1)
+    y = df['visited_website']
     model.fit(X, y)
 
     joblib.dump(model,'model.pkl')
@@ -30,23 +40,31 @@ def train_model():
 @app.route('/predict', methods=['POST'])
 
 def predict():
-    new_data = request.get_json()
-    new_data = pd.DataFrame(new_data)
-    y_pred = model.predict(new_data).tolist()
-    y_prob = model.predict_proba(new_data).tolist()
+    data = request.json
+    X_new = [[data["purchase_amount"], data["support_calls"]]]
+    prediction = model.predict(X_new)[0]
+    probability = model.predict_proba(X_new).tolist()
 
     return jsonify({
-        'predictions': y_pred,
-        'probabilities': y_prob,
+        'prediction': prediction.tolist(),
+        'probability': probability,
         'success': True
-    });
+    })
 
 @app.route('/retrain', methods=["POST"])
 
 def retrain():
-    data = request.get_json()
-    X_new = pd.DataFrame(data['X'])
-    y_new = pd.Series(data['y'])
+    if 'file' not in request.files:
+        return jsonify({
+            'message': 'No file uploaded',
+            'success': False
+        })
+
+    file = request.files['file']
+    df = pd.read_csv(file)
+    df.drop('customer_id', axis=1, inplace=True)
+    X_new = df.drop('visited_website', axis=1)
+    y_new = df['visited_website']
 
     global model
 
