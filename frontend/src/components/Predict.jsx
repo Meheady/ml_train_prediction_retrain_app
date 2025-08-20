@@ -7,9 +7,10 @@ export default function Predict() {
   const [result, setResult] = useState(null);
 
   const handlePredict = async () => {
-    const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/predict`, [
-      { purchase_amount: parseFloat(purchase), support_calls: parseInt(calls) },
-    ]);
+    const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/predict`, {
+      purchase_amount: parseFloat(purchase),
+      support_calls: parseInt(calls),
+    });
     setResult(res.data);
   };
 
